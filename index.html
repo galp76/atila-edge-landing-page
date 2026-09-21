@@ -94,8 +94,8 @@
   @media (max-width:560px){
     header.hero{padding:48px 0 34px}
     section{padding:34px 0}
-    pre{font-size:.74rem;padding:14px 14px}
-    .wrap{padding:0 16px}
+    pre{font-size:clamp(9.5px,2.6vw,10.6px);padding:13px 12px;line-height:1.45}
+    .wrap{padding:0 12px}
     table{min-width:0;font-size:.86rem}
     th,td{padding:8px 8px}
     td.n{white-space:normal}
@@ -151,30 +151,32 @@
     <h2><span class="num">02</span> Arquitectura</h2>
     <p>Del sensor a la sirena, en cuatro tramos. El teléfono es el borde: no delega el análisis.</p>
     <figure>
-<pre>  +--------------------------------+
-  | Arduino Uno (clon CH340)       |   MPU-6050 (0x68) + OLED I2C + botones
-  +----------------+---------------+
-                   |
-                   |  USB OTG  (termux-usb)
-                   v
-  +--------------------------------+
-  | Go  -  capataz del pipeline    |   20 Hz . bufer circular 40 . Wake-on-Motion
-  | internal/audio, daemon, panel  |   auto-calibracion de orientacion (Rodrigues)
-  +----------------+---------------+
-                   |
-                   |  IPC  (FIFO)
-                   v
-  +--------------------------------+
-  | C++ -  demonio de inferencia   |   sin cambios desde v3.0
-  | DFT 40x40 -> 13 features       |   log1p -> igualacion -> z-score
-  | MLP 13-256-1 -> arbitro        |   piso de energia -> estados 0..3
-  +----------------+---------------+
-                   |
-                   |  nivel 0..3
-                   v
-  +--------------------------------+
-  | Alerta escalonada de 4 niveles |   sirena (alarma.mp3) + candado 15 s
-  +----------------+---------------+</pre>
+<pre>  +------------------------+
+  | Arduino Uno (CH340)    |   MPU-6050 + OLED (I2C)
+  | MPU-6050 (0x68)        |
+  +------------+-----------+
+              |
+              |  USB OTG (termux-usb)
+              v
+  +------------------------+
+  | Go - capataz del bucle |   20 Hz, bufer circ. 40
+  | internal/audio         |   calibracion orientacion
+  | internal/daemon, panel |   panel web :8090
+  +------------+-----------+
+              |
+              |  IPC (FIFO)
+              v
+  +------------------------+
+  | C++ - inferencia       |   log1p + igualacion + z
+  | DFT 40x40, 13 features |   piso de energia: veta
+  | MLP 13-256-1, arbitro  |   estados 0..3
+  +------------+-----------+
+              |
+              |  nivel 0..3
+              v
+  +------------------------+
+  | Alerta escalonada (4)  |   sirena + candado 15 s
+  +------------+-----------+</pre>
       <figcaption>Ruta de datos. El modelo CARABOBO19 se conserva; no se reentrena la red completa.</figcaption>
     </figure>
     <h3>Hardware</h3>
@@ -197,14 +199,14 @@
       <li><strong>Wake-on-Motion:</strong> en reposo no se infiere siquiera — ahorro de batería.</li>
     </ol>
     <figure>
-<pre>  pred [0,1]                        umbrales en configs/config_envivo.ini
+<pre>  umbrales en configs/config_envivo.ini
 
-    >= 0.70   <span class="n3">NIVEL 3   ALARMA</span>       sirena + candado 15 s
-    0.50-0.70 <span class="n2">NIVEL 2   ALERTA</span>
-    0.30-0.50 <span class="n1">NIVEL 1   VIGILANCIA</span>
-     &lt; 0.30   <span class="n0">NIVEL 0   REPOSO</span>       no se infiere (Wake-on-Motion)
+     >= 0.70  <span class="n3">NIVEL 3</span> ALARMA    sirena + candado 15 s
+   0.50-0.70  <span class="n2">NIVEL 2</span> ALERTA
+   0.30-0.50  <span class="n1">NIVEL 1</span> VIGILANCIA
+      < 0.30  <span class="n0">NIVEL 0</span> REPOSO    no se infiere (WoM)
 
-  Para declarar un nivel se exigen 3 rafagas consecutivas por encima del umbral.</pre>
+  3 rafagas consecutivas por encima del umbral = nivel</pre>
       <figcaption>Escalera de alerta. Los umbrales y la persistencia son configuración, no código.</figcaption>
     </figure>
   </section>
@@ -241,19 +243,19 @@
       los datos. Una ventana de 2&nbsp;s se procesa en medio milisegundo: sobra margen.
     </p>
     <figure>
-<pre>  desglose del computo, por ventana de 2 s        Redmi Go        Laptop
-  ----------------------------------------------  ----------    ----------
-  features  (DFT + log1p + igualacion + z-score)    391 µs         25 µs
-  MLP 13 -> 256 -> 1                                110 µs          8 µs
-  arbitro + escalera de niveles                      17 µs          2 µs
-                                                  ----------    ----------
-  TOTAL por ventana                                 518 µs         35 µs
+<pre>  computo por ventana de 2 s       Redmi Go     Laptop
+                                  ---------   --------
+  features (DFT, log1p, z-score)     391 µs      25 µs
+  MLP 13 -> 256 -> 1                 110 µs       8 µs
+  arbitro + escalera                  17 µs       2 µs
+                                  ---------   --------
+  TOTAL por ventana                  518 µs      35 µs
 
-  referencias de cadencia                              valor  vs. 518 µs
-  ----------------------------------------------  ------------  ----------
-  senal que procesa cada ventana                2 000 000 µs     ~3 860x
-  cadencia real de rafagas (10 lecturas @ 20 Hz)  500 000 µs       ~965x
-  peor caso medido                                  1 210 µs       ~400x</pre>
+  referencias de cadencia            valor  vs. 518 µs
+                              ------------  ----------
+  senal procesada (1 ventana) 2 000 000 µs     ~3 860x
+  cadencia de rafagas (0.5 s)   500 000 µs       ~965x
+  peor caso medido                1 210 µs       ~400x</pre>
       <figcaption>El CPU queda ocupado con la inferencia alrededor del 0.1 % del tiempo.</figcaption>
     </figure>
     <div class="warn">
