@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atila_Edge — Monitoreo de vibración estructural con IA en el borde</title>
+<meta name="description" content="Atila_Edge decide en el propio dispositivo si hay un evento de vibración estructural, sobre un teléfono Android de gama baja. Pipeline acelerómetro → 13 features espectrales → MLP → árbitro físico-estadístico → alerta de 4 niveles. Sin nube.">
+<meta name="color-scheme" content="light">
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --ink:#1a2233; --muted:#6b7686; --line:#dde3ec;
+    --green:#1a9e5a; --amber:#e09a00; --red:#d63a3a;
+    --green-bg:#e2f6ec; --amber-bg:#fdf3dc; --red-bg:#fde8e8;
+    --mono:ui-monospace,"DejaVu Sans Mono","Liberation Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:17px;line-height:1.62;text-wrap:pretty}
+  .wrap{max-width:880px;margin:0 auto;padding:0 22px}
+  a{color:var(--ink)}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* ---------- encabezado ---------- */
+  header.hero{padding:72px 0 44px;border-bottom:1px solid var(--line)}
+  .eyebrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+           font-family:var(--mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}
+  .eyebrow .name{font-weight:700}
+  .chip{border:1px solid var(--line);background:var(--card);color:var(--muted);
+        border-radius:999px;padding:3px 10px;font-family:var(--mono);font-size:.72rem;
+        letter-spacing:.04em;text-transform:none;white-space:nowrap}
+  h1{font-size:clamp(1.75rem,4.2vw,2.6rem);line-height:1.2;letter-spacing:-.02em;
+     margin:26px 0 14px;max-width:22ch}
+  .lead{font-size:1.08rem;max-width:62ch;color:var(--ink);margin:0 0 10px}
+  .lead .hl{background:linear-gradient(transparent 62%,var(--green-bg) 62%);font-weight:600}
+  .sub{color:var(--muted);font-size:.95rem;max-width:62ch;margin:0}
+
+  /* ---------- secciones ---------- */
+  section{padding:44px 0;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  h2{display:flex;gap:14px;align-items:baseline;margin:0 0 18px;
+     font-size:1.22rem;letter-spacing:-.01em}
+  h2 .num{font-family:var(--mono);font-size:.78rem;color:var(--muted);letter-spacing:.1em;font-weight:500}
+  h3{font-size:1rem;margin:26px 0 8px}
+  p{margin:0 0 14px;max-width:66ch}
+  ul,ol{max-width:66ch;padding-left:1.3em;margin:0 0 14px}
+  li{margin-bottom:6px}
+  li::marker{color:var(--muted);font-family:var(--mono);font-size:.9em}
+  .note{color:var(--muted);font-size:.92rem}
+
+  /* ---------- bloques ASCII ---------- */
+  pre{font-family:var(--mono);font-size:.82rem;line-height:1.5;background:var(--card);
+      border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 18px;
+      overflow-x:auto;color:#243044;tab-size:8}
+  pre.caption{margin-bottom:26px}
+  figure{margin:0 0 26px}
+  figcaption{color:var(--muted);font-size:.85rem;font-family:var(--mono);
+             margin-top:-10px;padding-left:2px}
+  code{font-family:var(--mono);font-size:.88em;background:var(--card);
+       border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+  /* ---------- tablas ---------- */
+  .tw{overflow-x:auto;margin:0 0 18px}
+  table{border-collapse:collapse;width:100%;font-size:.92rem;min-width:520px}
+  caption{text-align:left;color:var(--muted);font-size:.85rem;font-family:var(--mono);padding:0 0 8px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;
+           color:var(--muted);font-weight:600;border-bottom:1px solid var(--ink)}
+  td.n{font-family:var(--mono);font-size:.86rem;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  .tot td{font-weight:700;border-top:1px solid var(--ink)}
+
+  /* ---------- niveles de alerta ---------- */
+  .n0{color:var(--green);font-weight:700}
+  .n1,.n2{color:var(--amber);font-weight:700}
+  .n3{color:var(--red);font-weight:700}
+
+  /* ---------- avisos ---------- */
+  .warn{border:1px solid var(--amber);background:var(--amber-bg);border-radius:12px;
+        padding:14px 18px;margin:0 0 18px;font-size:.94rem}
+  .warn p{margin:0 0 8px}
+  .warn p:last-child{margin:0}
+  .warn .tag{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;
+             color:var(--muted);display:block;margin-bottom:6px}
+  .rule{border:0;border-top:1px solid var(--line);margin:22px 0}
+
+  /* ---------- pies ---------- */
+  footer{padding:34px 0 56px;color:var(--muted);font-size:.88rem}
+  footer dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0 0 20px;max-width:66ch}
+  footer dt{font-family:var(--mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+  footer dd{margin:0}
+
+  @media (max-width:560px){
+    header.hero{padding:48px 0 34px}
+    section{padding:34px 0}
+    pre{font-size:.74rem;padding:14px 14px}
+    .wrap{padding:0 16px}
+    table{min-width:0;font-size:.86rem}
+    th,td{padding:8px 8px}
+    td.n{white-space:normal}
+  }
+  @media print{
+    body{background:#fff}
+    header.hero{padding-top:0}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">
+      <span class="name">Atila_Edge</span>
+      <span class="chip">Sismógrafo en el borde · edge AI</span>
+      <span class="chip">v4.1-orientacion-panel</span>
+    </div>
+    <h1>Monitoreo de vibración estructural con IA en el borde.</h1>
+    <p class="lead">
+      Detección de eventos sísmicos en tiempo real, decidida <strong>dentro del propio
+      dispositivo</strong> y sobre un teléfono Android de gama baja — sin nube.
+      Una ventana de 2&nbsp;s se analiza en <span class="hl">~0.5&nbsp;ms</span>.
+    </p>
+    <p class="sub">
+      Hardware total: un Arduino Uno con un acelerómetro MPU-6050 conectado por USB OTG
+      al teléfono que procesa. Monitoreo de infraestructura a costo de descarte.
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="que-es">
+    <h2><span class="num">01</span> Qué es</h2>
+    <p>
+      Atila_Edge mide la vibración de una estructura —viga, columna, piso, escritorio— con
+      un acelerómetro y decide <strong>en el propio dispositivo</strong> si hay un evento,
+      emitiendo una alerta escalonada de 4 niveles. Está pensado para
+      <strong>monitoreo B2B de infraestructura</strong> a costo de descarte (una caja de
+      pocos dólares por punto), <strong>no</strong> como «alarma personal de bolsillo».
+    </p>
+    <p>
+      El pipeline completo corre local: muestreo del acelerómetro, ventanas crudas,
+      características espectrales, una red neuronal y un árbitro físico-estadístico que
+      veta el reposo. No hay servidor, ni API en la nube, ni envío de datos a terceros.
+    </p>
+  </section>
+
+  <section id="arquitectura">
+    <h2><span class="num">02</span> Arquitectura</h2>
+    <p>Del sensor a la sirena, en cuatro tramos. El teléfono es el borde: no delega el análisis.</p>
+    <figure>
+<pre>  +--------------------------------+
+  | Arduino Uno (clon CH340)       |   MPU-6050 (0x68) + OLED I2C + botones
+  +----------------+---------------+
+                   |
+                   |  USB OTG  (termux-usb)
+                   v
+  +--------------------------------+
+  | Go  -  capataz del pipeline    |   20 Hz . bufer circular 40 . Wake-on-Motion
+  | internal/audio, daemon, panel  |   auto-calibracion de orientacion (Rodrigues)
+  +----------------+---------------+
+                   |
+                   |  IPC  (FIFO)
+                   v
+  +--------------------------------+
+  | C++ -  demonio de inferencia   |   sin cambios desde v3.0
+  | DFT 40x40 -> 13 features       |   log1p -> igualacion -> z-score
+  | MLP 13-256-1 -> arbitro        |   piso de energia -> estados 0..3
+  +----------------+---------------+
+                   |
+                   |  nivel 0..3
+                   v
+  +--------------------------------+
+  | Alerta escalonada de 4 niveles |   sirena (alarma.mp3) + candado 15 s
+  +----------------+---------------+</pre>
+      <figcaption>Ruta de datos. El modelo CARABOBO19 se conserva; no se reentrena la red completa.</figcaption>
+    </figure>
+    <h3>Hardware</h3>
+    <p>
+      Arduino Uno (clon CH340) + MPU-6050 (GY-521) + display OLED I2C, conectados por USB OTG
+      a un Redmi Go que <strong>procesa</strong> (no solo recolecta). La orientación del sensor
+      se auto-calibra al arrancar, de modo que no se exige un montaje exacto.
+    </p>
+  </section>
+
+  <section id="como-decide">
+    <h2><span class="num">03</span> Cómo decide</h2>
+    <ol>
+      <li>Acelerómetro triaxial (N/E/Z) muestreado a 20&nbsp;Hz.</li>
+      <li>Ventana de 2&nbsp;s = 40 muestras × 3 ejes.</li>
+      <li>13 características espectrales por DFT, con <code>log1p</code> y <code>z-score</code>.</li>
+      <li>Red neuronal MLP 13 → 256 → 1: probabilidad de evento en [0, 1].</li>
+      <li>Árbitro físico-estadístico (piso de energía del canal Z) que veta el reposo.</li>
+      <li>Máquina de estados 0–3 con persistencia (3 ventanas) y candado anti-bucle (15&nbsp;s).</li>
+      <li><strong>Wake-on-Motion:</strong> en reposo no se infiere siquiera — ahorro de batería.</li>
+    </ol>
+    <figure>
+<pre>  pred [0,1]                        umbrales en configs/config_envivo.ini
+
+    >= 0.70   <span class="n3">NIVEL 3   ALARMA</span>       sirena + candado 15 s
+    0.50-0.70 <span class="n2">NIVEL 2   ALERTA</span>
+    0.30-0.50 <span class="n1">NIVEL 1   VIGILANCIA</span>
+     &lt; 0.30   <span class="n0">NIVEL 0   REPOSO</span>       no se infiere (Wake-on-Motion)
+
+  Para declarar un nivel se exigen 3 rafagas consecutivas por encima del umbral.</pre>
+      <figcaption>Escalera de alerta. Los umbrales y la persistencia son configuración, no código.</figcaption>
+    </figure>
+  </section>
+
+  <section id="metricas">
+    <h2><span class="num">04</span> Métricas medidas</h2>
+    <p class="note">Todo lo de esta tabla está medido y documentado (no son estimaciones).</p>
+    <div class="tw">
+      <table>
+        <caption>Rendimiento y comportamiento en operación</caption>
+        <thead>
+          <tr><th>Métrica</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Latencia de cómputo por ventana</td><td class="n">518 µs (Redmi Go) · 35 µs (laptop)</td></tr>
+          <tr><td>Factor tiempo real</td><td class="n">~3 900× (Redmi Go) · ~57 000× (laptop)</td></tr>
+          <tr><td>Muestreo / ventana</td><td class="n">20 Hz · 40 muestras (2 s) · 3 ejes</td></tr>
+          <tr><td>Características</td><td class="n">13  (9 energías de banda + H/V + 3 STA/LTA)</td></tr>
+          <tr><td>Modelo</td><td class="n">MLP 13 → 256 → 1</td></tr>
+          <tr><td>Transfer learning</td><td class="n">257 pesos ajustables · 3 584 congelados</td></tr>
+          <tr><td>Ahorro de cómputo en reposo</td><td class="n">&gt; 97 %  (Wake-on-Motion)</td></tr>
+          <tr><td>Falsos positivos en reposo</td><td class="n">0  (8 h nocturnas: 52 869 SLEEP) · 0  (validación 13 min)</td></tr>
+          <tr><td>Alertas</td><td class="n">4 niveles + persistencia 3 + candado 15 s</td></tr>
+          <tr><td>Orientación del sensor</td><td class="n">auto-calibrada (Rodrigues), sin brújula</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tiempo-real">
+    <h2><span class="num">05</span> ¿Es «tiempo real»? Sí, con una precisión</h2>
+    <p>
+      El número de 518&nbsp;µs solo significa algo comparado con la cadencia a la que llegan
+      los datos. Una ventana de 2&nbsp;s se procesa en medio milisegundo: sobra margen.
+    </p>
+    <figure>
+<pre>  desglose del computo, por ventana de 2 s        Redmi Go        Laptop
+  ----------------------------------------------  ----------    ----------
+  features  (DFT + log1p + igualacion + z-score)    391 µs         25 µs
+  MLP 13 -> 256 -> 1                                110 µs          8 µs
+  arbitro + escalera de niveles                      17 µs          2 µs
+                                                  ----------    ----------
+  TOTAL por ventana                                 518 µs         35 µs
+
+  referencias de cadencia                              valor  vs. 518 µs
+  ----------------------------------------------  ------------  ----------
+  senal que procesa cada ventana                2 000 000 µs     ~3 860x
+  cadencia real de rafagas (10 lecturas @ 20 Hz)  500 000 µs       ~965x
+  peor caso medido                                  1 210 µs       ~400x</pre>
+      <figcaption>El CPU queda ocupado con la inferencia alrededor del 0.1 % del tiempo.</figcaption>
+    </figure>
+    <div class="warn">
+      <span class="tag">No confundir dos latencias</span>
+      <p>
+        <strong>Cómputo</strong> (lo medido arriba): ~0.5&nbsp;ms. Irrelevante para el sistema,
+        porque el cuello de botella está en otra parte.
+      </p>
+      <p>
+        <strong>Detección</strong> (evento → alarma): <strong>~1.5–2&nbsp;s</strong>. No es una
+        limitación del CPU: es una <strong>decisión de diseño</strong> (persistencia 3/3) para no
+        producir falsas alarmas. Se compone de: gate y muestreo (≤0.5&nbsp;s) + persistencia
+        (~1.5&nbsp;s) + cómputo (0.5&nbsp;ms).
+      </p>
+    </div>
+  </section>
+
+  <section id="alcance">
+    <h2><span class="num">06</span> Alcance y límites</h2>
+    <p>
+      El régimen validado es el sensor <strong>montado fijo sobre una superficie estable</strong>:
+      escritorio, mesa, piso, viga estructural. Fuera de ahí, el sistema está fuera de su dominio,
+      y eso está documentado como frontera del diseño — no como un defecto pendiente.
+    </p>
+    <div class="tw">
+      <table>
+        <caption>Evidencia de campo (2026-08-11 .. 13, sensor del teléfono)</caption>
+        <thead>
+          <tr><th>Régimen</th><th>Resultado</th><th>Conclusión</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Superficie fija — 5 sesiones (escritorio ×4, comedor)</td>
+            <td class="n">0 falsas alarmas · 15/15 golpes detectados · reposo 100 % limpio</td>
+            <td>Dominio correcto, validado y saturado</td>
+          </tr>
+          <tr>
+            <td>Cuerpo en movimiento — 1 sesión (caminata urbana, 4 min)</td>
+            <td class="n">18 falsas alarmas (cadencia = candado de 15 s)</td>
+            <td>Fuera de alcance: la vibración sostenida de los pasos cruza la persistencia 3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      La configuración congelada (persistencia 3, piso del árbitro 0.3, modelo CARABOBO19) es la
+      correcta para el régimen de superficie fija y no requiere cambios.
+    </p>
+    <h3>Diferenciador: la red no se reentrena</h3>
+    <p>
+      El sistema aprovecha una red entrenada con datos sísmicos de calidad y la adapta al sensor
+      del dispositivo mediante (a) un filtro de igualación espectral y (b) un ajuste fino de
+      <em>solo la última capa</em>. Consecuencia: robustez con datos escasos, sin re-entrenar el
+      modelo completo. Con el MPU-6050 la igualación queda en identidad y el modelo discrimina
+      por sí solo.
+    </p>
+  </section>
+
+  <section id="notas">
+    <h2><span class="num">07</span> Notas de medición</h2>
+    <p class="note">Lo anterior es sólido, pero conviene saber con qué base se midió.</p>
+    <ul class="note">
+      <li>La latencia publicada es <strong>de cómputo por ráfaga</strong>, no de detección (esa depende del muestreo a 20 Hz y del gate Wake-on-Motion).</li>
+      <li>Es <strong>independiente del modelo</strong>: la arquitectura 13 → 256 → 1 es la misma para el modelo campeón y para el adaptado.</li>
+      <li>Muestreo pequeño: Redmi Go con 18 ráfagas (media 518 µs, máximo 1 209 µs); laptop con 453 ráfagas (media 35 µs). Pendiente repetir para consolidar.</li>
+      <li>El <strong>peor caso medido fue ~1.2 ms</strong>: prometer sub-milisegundo «en todas las condiciones» sería un atajo, no un dato.</li>
+      <li>Pendientes de campo: montaje estructural real (viga/concreto) y varianza entre placas GY-521.</li>
+      <li>El proyecto está en <strong>mantenimiento</strong>: las funciones nuevas entran solo por decisión explícita.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <hr class="rule">
+    <dl>
+      <dt>Estado</dt><dd>master @ v4.1-orientacion-panel · repo en mantenimiento</dd>
+      <dt>Ejecuta</dt><dd>Go (capataz, IPC, panel) + C++ (inferencia) sobre Termux / Android</dd>
+      <dt>Código</dt><dd>repositorio privado (galp76/Atila_Edge); disponible a solicitud</dd>
+      <dt>Fecha</dt><dd>2026-09-21</dd>
+    </dl>
+    <p class="note">Esta página no usa JavaScript, ni imágenes, ni dependencias externas. Solo HTML y CSS.</p>
+  </div>
+</footer>
+
+</body>
+</html>
