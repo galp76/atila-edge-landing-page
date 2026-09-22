@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atila_Edge — Monitoreo de vibración estructural con IA en el borde</title>
-<meta name="description" content="Atila_Edge decide en el propio dispositivo si hay un evento de vibración estructural, sobre un teléfono Android de gama baja. Pipeline acelerómetro → 13 features espectrales → MLP → árbitro físico-estadístico → alerta de 4 niveles. Sin nube.">
+<title>Atila_Edge — Monitoreo de vibración estructural con machine learning en el borde</title>
+<meta name="description" content="Atila_Edge decide en el propio dispositivo si hay un evento de vibración estructural, sobre un teléfono Android de gama baja. Pipeline acelerómetro → 13 características espectrales → MLP → árbitro físico-estadístico → alerta de 4 niveles. Sin nube.">
 <meta name="color-scheme" content="light">
 <style>
   :root{
@@ -19,8 +19,6 @@
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
        font-size:17px;line-height:1.62;text-wrap:pretty}
   .wrap{max-width:880px;margin:0 auto;padding:0 22px}
-  a{color:var(--ink)}
-  a:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 
   /* ---------- encabezado ---------- */
   header.hero{padding:72px 0 44px;border-bottom:1px solid var(--line)}
@@ -34,7 +32,7 @@
      margin:26px 0 14px;max-width:22ch}
   .lead{font-size:1.08rem;max-width:62ch;color:var(--ink);margin:0 0 10px}
   .lead .hl{background:linear-gradient(transparent 62%,var(--green-bg) 62%);font-weight:600}
-  .sub{color:var(--muted);font-size:.95rem;max-width:62ch;margin:0}
+  .sub{color:var(--muted);font-size:.95rem;max-width:62ch;margin:0 0 24px}
 
   /* ---------- secciones ---------- */
   section{padding:44px 0;border-bottom:1px solid var(--line)}
@@ -44,7 +42,7 @@
   h2 .num{font-family:var(--mono);font-size:.78rem;color:var(--muted);letter-spacing:.1em;font-weight:500}
   h3{font-size:1rem;margin:26px 0 8px}
   p{margin:0 0 14px;max-width:66ch}
-  ul,ol{max-width:66ch;padding-left:1.3em;margin:0 0 14px}
+  ol{max-width:66ch;padding-left:1.3em;margin:0 0 14px}
   li{margin-bottom:6px}
   li::marker{color:var(--muted);font-family:var(--mono);font-size:.9em}
   .note{color:var(--muted);font-size:.92rem}
@@ -53,7 +51,6 @@
   pre{font-family:var(--mono);font-size:.82rem;line-height:1.5;background:var(--card);
       border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 18px;
       overflow-x:auto;color:#243044;tab-size:8}
-  pre.caption{margin-bottom:26px}
   figure{margin:0 0 26px}
   figcaption{color:var(--muted);font-size:.85rem;font-family:var(--mono);
              margin-top:-10px;padding-left:2px}
@@ -69,7 +66,6 @@
            color:var(--muted);font-weight:600;border-bottom:1px solid var(--ink)}
   td.n{font-family:var(--mono);font-size:.86rem;white-space:nowrap}
   tbody tr:last-child td{border-bottom:0}
-  .tot td{font-weight:700;border-top:1px solid var(--ink)}
 
   /* ---------- niveles de alerta ---------- */
   .n0{color:var(--green);font-weight:700}
@@ -113,17 +109,18 @@
   <div class="wrap">
     <div class="eyebrow">
       <span class="name">Atila_Edge</span>
-      <span class="chip">Análisis en el borde · edge AI</span>
+      <span class="chip">Machine Learning · Análisis en el borde</span>
     </div>
-    <h1>Monitoreo de vibración estructural con IA en el borde.</h1>
-    <p class="lead">
-      Detección de eventos en tiempo real, decidida <strong>dentro del propio
-      dispositivo</strong> y sobre un teléfono Android de gama baja — sin nube.
-      Una ventana de 2&nbsp;s se analiza en <span class="hl">~0.5&nbsp;ms</span>.
-    </p>
+    <h1>Monitoreo de vibración estructural con machine learning en el borde.</h1>
     <p class="sub">
       Hardware total: un Arduino Uno con un acelerómetro MPU-6050 conectado por USB OTG
-      al teléfono que procesa. Monitoreo de infraestructura a costo de descarte.
+      al teléfono que procesa.
+    </p>
+    <p class="lead">
+      Detección en tiempo real de <strong>eventos de vibración estructural</strong>,
+      decidida <strong>dentro del propio dispositivo:</strong> un teléfono Android
+      de gama baja — sin nube.
+      Una ventana de 2&nbsp;s se analiza en <span class="hl">~0.5&nbsp;ms</span>.
     </p>
   </div>
 </header>
@@ -142,7 +139,10 @@
     <p>
       El pipeline completo corre local: muestreo del acelerómetro, ventanas crudas,
       características espectrales, una red neuronal y un árbitro físico-estadístico que
-      veta el reposo. No hay servidor, ni API en la nube, ni envío de datos a terceros.
+      veta el reposo. La red neuronal está entrenada con
+      <strong>datos sísmicos reales</strong> y es independiente del sistema que le
+      suministra la señal.
+      No hay servidor, ni API en la nube, ni envío de datos a terceros.
     </p>
   </section>
 
@@ -155,26 +155,26 @@
   |        MPU-6050        |
   +------------+-----------+
               |
-              |  USB OTG 
+              |  USB OTG
               v
   +------------------------+
-  |                        |   calibracion orientacion
-  | Go - capataz del bucle |   20 Hz, bufer circ. 40
-  |                        |   vitrina web local
+  |                        |   calibración de orientación
+  |   Adquisición (borde)  |   muestreo a 20 Hz
+  |                        |   panel web local
   +------------+-----------+
               |
-              |  IPC (FIFO)
+              |  IPC
               v
   +------------------------+
-  | C++ - inferencia       |   log1p + igualacion + z
-  | DFT 40x40, 13 features |   piso de energia: veta
-  | MLP 13-256-1, arbitro  |   estados 0..3
+  |                        |   13 características
+  |   Motor de inferencia  |   piso de energía: veta
+  |                        |   estados 0..3
   +------------+-----------+
               |
               |  nivel 0..3
               v
   +------------------------+
-  | Alerta escalonada (4)  |   sirena + candado 15 s
+  | Alerta escalonada (4)  |   sirena + candado anti-bucle
   +------------+-----------+</pre>
       <figcaption>Ruta de los datos.</figcaption>
     </figure>
@@ -191,28 +191,77 @@
     <ol>
       <li>Acelerómetro triaxial (N/E/Z) muestreado a 20&nbsp;Hz.</li>
       <li>Ventana de 2&nbsp;s = 40 muestras × 3 ejes.</li>
-      <li>13 características espectrales por DFT, con <code>log1p</code> y <code>z-score</code>.</li>
+      <li>13 características espectrales por DFT (bandas de frecuencia), con <code>log1p</code> y <code>z-score</code>.</li>
       <li>Red neuronal MLP 13 → 256 → 1: probabilidad de evento en [0, 1].</li>
       <li>Árbitro físico-estadístico (piso de energía del canal Z) que veta el reposo.</li>
-      <li>Máquina de estados 0–3 con persistencia (3 ventanas) y candado anti-bucle (15&nbsp;s).</li>
+      <li>Máquina de estados 0–3 con persistencia configurable y candado anti-bucle.</li>
       <li><strong>Wake-on-Motion:</strong> en reposo no se infiere siquiera — ahorro de batería.</li>
     </ol>
+
+    <h3>De la vibración a la firma sísmica</h3>
+    <p>
+      El paso 3 no es genérico: la ventana se <strong>descompone en bandas de
+      frecuencia</strong> y el análisis se concentra en la <strong>banda de onda P</strong>,
+      donde viaja el primer frente de un sismo.
+      <strong>7 de las 13 características</strong> salen de esa banda.
+    </p>
     <figure>
-<pre>  umbrales de decisión
-
-     >= 0.70  <span class="n3">NIVEL 3</span> ALARMA    sirena + candado 15 s
-   0.50-0.70  <span class="n2">NIVEL 2</span> ALERTA
-   0.30-0.50  <span class="n1">NIVEL 1</span> VIGILANCIA
-      < 0.30  <span class="n0">NIVEL 0</span> REPOSO    no se infiere (WoM)
-
-  3 rafagas consecutivas por encima del umbral = alarma</pre>
+<pre>  +------------------------+
+  | 1 ventana (N/E/Z)      |   40 muestras/eje @ 20 Hz
+  | 120 muestras crudas    |
+  +------------+-----------+
+              |
+              |  DFT (40 puntos)
+              v
+  +------------------------+
+  | Descomposición en      |   micro-sísmica
+  | bandas, por eje        |   onda P local
+  |                        |   ruido antrópico
+  +------------+-----------+
+              |
+              |  banda de onda P
+              v
+  +------------------------+
+  | 7 de las 13            |   energía de la banda
+  | características        |   contraste con el fondo
+  | nacen de la banda P    |   relación entre ejes
+  +------------+-----------+</pre>
+      <figcaption>Descomposición espectral: la banda de onda P concentra la decisión.</figcaption>
+    </figure>
+    <p>
+      Esas bandas se comparan contra el <strong>patrón aprendido de sismos
+      reales</strong>: cuánta energía concentra la banda de onda P, su contraste con el
+      ruido de fondo y su relación entre ejes. El <code>z-score</code> normaliza con las
+      estadísticas del entrenamiento. La red no detecta «un golpe»: detecta
+      <strong>una firma espectral parecida a la de un evento</strong>.
+    </p>
+    <figure>
+<pre>  +------------------------+
+  | predicción por ventana |   escala 0 a 1
+  | MLP 13 -> 256 -> 1     |
+  +------------+-----------+
+              |
+              |  umbrales de decisión
+              v
+  +------------------------+
+  | <span class="n0">NIVEL 0</span>   REPOSO       |   pred baja       no se infiere (WoM)
+  | <span class="n1">NIVEL 1</span>   VIGILANCIA   |   pred media      log, sin sirena
+  | <span class="n2">NIVEL 2</span>   ALERTA       |   pred alta       aviso visual
+  | <span class="n3">NIVEL 3</span>   ALARMA       |   pred muy alta   sirena + aviso
+  +------------+-----------+
+              |
+              |  regla de disparo
+              v
+  +------------------------+
+  | Persistencia           |   varias ráfagas consecutivas sobre el umbral
+  +------------+-----------+</pre>
       <figcaption>Escalera de alerta. Los umbrales y la persistencia son configuración, no código.</figcaption>
     </figure>
   </section>
 
   <section id="metricas">
-    <h2><span class="num">04</span> Métricas medidas</h2>
-    <p class="note">Todo lo de esta tabla está medido y documentado (no son estimaciones).</p>
+    <h2><span class="num">04</span> Métricas</h2>
+    <p class="note">Cifras de corridas registradas. El ahorro en reposo es una estimación.</p>
     <div class="tw">
       <table>
         <caption>Rendimiento y comportamiento en operación</caption>
@@ -221,13 +270,13 @@
         </thead>
         <tbody>
           <tr><td>Latencia de cómputo por ventana</td><td class="n">518 µs (Redmi Go) · 35 µs (laptop)</td></tr>
-          <tr><td>Factor tiempo real</td><td class="n">~3 900× (Redmi Go) · ~57 000× (laptop)</td></tr>
+          <tr><td>Factor tiempo real</td><td class="n">~3 860× (Redmi Go) · ~57 000× (laptop)</td></tr>
           <tr><td>Muestreo / ventana</td><td class="n">20 Hz · 40 muestras (2 s) · 3 ejes</td></tr>
-          <tr><td>Características</td><td class="n">13  (9 energías de banda + H/V + 3 STA/LTA)</td></tr>
+          <tr><td>Características</td><td class="n">13 espectrales (bandas de frecuencia)</td></tr>
           <tr><td>Modelo</td><td class="n">MLP 13 → 256 → 1</td></tr>
           <tr><td>Transfer learning</td><td class="n">257 pesos ajustables · 3 584 congelados</td></tr>
-          <tr><td>Ahorro de cómputo en reposo</td><td class="n">&gt; 97 %  (Wake-on-Motion)</td></tr>
-          <tr><td>Alertas</td><td class="n">4 niveles + persistencia 3 + candado 15 s</td></tr>
+          <tr><td>Ahorro de cómputo en reposo</td><td class="n">&gt; 97&nbsp;%  (Wake-on-Motion, estimado)</td></tr>
+          <tr><td>Alertas</td><td class="n">4 niveles + persistencia configurable + candado anti-bucle</td></tr>
           <tr><td>Orientación del sensor</td><td class="n">auto-calibrada (Rodrigues), sin brújula</td></tr>
         </tbody>
       </table>
@@ -241,32 +290,32 @@
       los datos. Una ventana de 2&nbsp;s se procesa en medio milisegundo: sobra margen.
     </p>
     <figure>
-<pre>  computo por ventana de 2 s       Redmi Go     Laptop
+<pre>  cómputo por ventana de 2 s       Redmi Go     Laptop
                                   ---------   --------
-  features (DFT, log1p, z-score)     391 µs      25 µs
+  características espectrales          391 µs      25 µs
   MLP 13 -> 256 -> 1                 110 µs       8 µs
-  arbitro + escalera                  17 µs       2 µs
+  árbitro + escalera                  17 µs       2 µs
                                   ---------   --------
   TOTAL por ventana                  518 µs      35 µs
 
   referencias de cadencia            valor  vs. 518 µs
                               ------------  ----------
-  senal procesada (1 ventana) 2 000 000 µs     ~3 860x
-  cadencia de rafagas (0.5 s)   500 000 µs       ~965x
+  señal procesada (1 ventana) 2 000 000 µs     ~3 860x
+  cadencia de ráfagas (0.5 s)   500 000 µs       ~965x
   peor caso medido                1 210 µs       ~400x</pre>
       <figcaption>El CPU queda ocupado con la inferencia alrededor del 0.1 % del tiempo.</figcaption>
     </figure>
     <div class="warn">
-      <span class="tag">No confundir dos latencias</span>
+      <span class="tag">Dos latencias distintas</span>
       <p>
-        <strong>Cómputo</strong> (lo medido arriba): ~0.5&nbsp;ms. Irrelevante para el sistema,
-        porque el cuello de botella está en otra parte.
+        <strong>Cómputo</strong> (lo medido arriba): ~0.5&nbsp;ms por ráfaga. Es el costo de
+        analizar la ventana — no lo que tarda en sonar la alarma.
       </p>
       <p>
-        <strong>Detección</strong> (evento → alarma): <strong>~1.5–2&nbsp;s</strong>. No es una
-        limitación del CPU: es una <strong>decisión de diseño</strong> (persistencia 3/3) para no
-        producir falsas alarmas. Se compone de: gate y muestreo (≤0.5&nbsp;s) + persistencia
-        (~1.5&nbsp;s) + cómputo (0.5&nbsp;ms).
+        <strong>Detección</strong> (evento → alarma): <strong>~1.5–2&nbsp;s</strong> —lo que
+        percibe el usuario—. No es una limitación del CPU: es una <strong>decisión de diseño</strong>
+        (persistencia configurable) para no producir falsas alarmas. Se compone de: gate y muestreo
+        (≤0.5&nbsp;s) + persistencia (~1.5&nbsp;s) + cómputo (0.5&nbsp;ms).
       </p>
     </div>
   </section>
@@ -278,21 +327,19 @@
       escritorio, mesa, piso, viga estructural. Fuera de ahí, el sistema está fuera de su dominio,
       y eso está documentado como frontera del diseño — no como un defecto pendiente.
     </p>
+    <p>
+      Conviene ser explícito: aunque el modelo se apoya en datos sísmicos, Atila_Edge
+      <strong>no es una estación sismológica</strong> —no localiza epicentros ni calcula
+      magnitudes—. Detecta <strong>que</strong> algo se movió en la estructura y emite una
+      alerta por niveles.
+    </p>
     <h3>Diferenciador</h3>
     <p>
-      El sistema aprovecha una red entrenada con datos sísmicos de calidad y la adapta al sensor
-      del dispositivo mediante (a) un filtro de igualación espectral y (b) un ajuste fino de
-      <em>solo la última capa</em>. Consecuencia: robustez con datos escasos, sin re-entrenar el
-      modelo completo.
+      El diferenciador es el <em>transfer learning</em>: el sistema se apoya en una red ya
+      entrenada con <strong>registros sísmicos reales</strong> y la adapta al sensor con un
+      <strong>ajuste fino de solo la última capa</strong> —sin re-entrenar el modelo completo—.
+      Consecuencia: robustez con pocos datos locales.
     </p>
-  </section>
-
-  <section id="notas">
-    <h2><span class="num">07</span> Notas de medición</h2>
-    <p class="note">Lo anterior es sólido, pero conviene saber con qué base se midió.</p>
-    <ul class="note">
-      <li>La latencia publicada es <strong>de cómputo por ráfaga</strong>, no de detección (esa depende del muestreo a 20 Hz y del gate Wake-on-Motion).</li>
-    </ul>
   </section>
 
 </main>
@@ -300,10 +347,15 @@
 <footer>
   <div class="wrap">
     <hr class="rule">
+    <p><strong>Atila_Edge</strong> · monitoreo de vibración estructural con machine learning en el borde.</p>
+    <p class="note">
+      Prototipo de investigación: no es un sistema certificado de alerta sísmica
+      ni sustituye a protección civil.
+    </p>
     <dl>
-      <dt>Fecha</dt><dd>2026-09-21</dd>
+      <dt>Versión</dt><dd>v4.1 · Arduino Uno + MPU-6050</dd>
+      <dt>Actualizado</dt><dd>2026-09-21</dd>
     </dl>
-    <p class="note">Esta página no usa JavaScript, ni imágenes, ni dependencias externas. Solo HTML y CSS.</p>
   </div>
 </footer>
 
