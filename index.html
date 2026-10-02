@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atila_Edge — Monitoreo de vibración estructural con machine learning en el borde</title>
-<meta name="description" content="Atila_Edge decide en el propio dispositivo si hay un evento de vibración estructural, sobre un teléfono Android de gama baja. Pipeline acelerómetro → 13 características espectrales → MLP → árbitro físico-estadístico → alerta de 4 niveles. Sin nube.">
+<title>Atila_Edge — Monitoreo de vibración estructural en el borde (analítica espectral autónoma; ML en validación)</title>
+<meta name="description" content="Atila_Edge decide en el propio dispositivo si hay un evento de vibración estructural, sobre un teléfono Android de gama baja. Pipeline acelerómetro → 13 características espectrales → clasificador MLP (en validación) → árbitro físico-estadístico → alerta de 4 niveles. Sin nube.">
 <meta name="color-scheme" content="light">
 <style>
   :root{
@@ -109,7 +109,7 @@
   <div class="wrap">
     <div class="eyebrow">
       <span class="name">Atila_Edge</span>
-      <span class="chip">Machine Learning · Análisis en el borde</span>
+      <span class="chip">Análisis en el borde · Machine Learning en validación</span>
     </div>
     <h1>Monitoreo de vibración estructural con machine learning en el borde.</h1>
     <p class="sub">
@@ -198,7 +198,7 @@
       <li><strong>Wake-on-Motion:</strong> en reposo no se infiere siquiera — ahorro de batería.</li>
     </ol>
 
-    <h3>De la vibración a la firma sísmica</h3>
+    <h3>De la vibración a la firma sísmica (objetivo)</h3>
     <p>
       El paso 3 no es genérico: la ventana se <strong>descompone en bandas de
       frecuencia</strong> y el análisis se concentra en la <strong>banda de onda P</strong>,
@@ -232,8 +232,10 @@
       Esas bandas se comparan contra el <strong>patrón aprendido de sismos
       reales</strong>: cuánta energía concentra la banda de onda P, su contraste con el
       ruido de fondo y su relación entre ejes. El <code>z-score</code> normaliza con las
-      estadísticas del entrenamiento. La red no detecta «un golpe»: detecta
-      <strong>una firma espectral parecida a la de un evento</strong>.
+      estadísticas del entrenamiento. El <strong>objetivo</strong> del clasificador es
+      reconocer una <strong>firma espectral sísmica</strong> y separarla de otras vibraciones
+      (un golpe, maquinaria); hoy el análisis se concentra en la <strong>banda de onda P</strong>
+      —la <strong>discriminación fina está en validación</strong>—.
     </p>
     <figure>
 <pre>  +------------------------+
@@ -327,7 +329,7 @@
       horizontal estable</strong> —escritorio, mesa—: reposo limpio y detección consistente, sin
       falsas alarmas. El frente actual es el <strong>montaje vertical sobre estructuras
       metálicas</strong>, un acoplamiento mecánico <strong>muy distinto</strong>, donde el sistema
-      <strong>está en validación</strong> con primeras mediciones favorables. Fuera de estos
+      <strong>está en validación</strong> —un régimen distinto—. Fuera de estos
       regímenes, el sistema queda fuera de su dominio: frontera del diseño documentada, no un
       defecto pendiente.
     </p>
@@ -339,10 +341,12 @@
     </p>
     <h3>Diferenciador</h3>
     <p>
-      El diferenciador es el <em>transfer learning</em>: el sistema se apoya en una red ya
-      entrenada con <strong>registros sísmicos reales</strong> y la adapta al sensor con un
-      <strong>ajuste fino de solo la última capa</strong> —sin re-entrenar el modelo completo—.
-      Consecuencia: robustez con pocos datos locales.
+      El <strong>valor probado</strong> es el <strong>borde autónomo</strong>: adquisición,
+      calibración de orientación, árbitro y alerta, todo en un teléfono de gama baja sin nube.
+      El <strong>objetivo</strong> es la <strong>discriminación fina</strong> por
+      <em>transfer learning</em>: partir de una red entrenada con registros sísmicos reales y
+      adaptarla al sensor con un <strong>ajuste fino de solo la última capa</strong> —sin
+      re-entrenar el modelo completo—. <strong>En validación.</strong>
     </p>
   </section>
 
